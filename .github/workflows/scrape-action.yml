@@ -25,10 +25,10 @@ jobs:
       - name: Run the script
         run: node scrape.js
 
-      # - name: Commit and push if there were changes
-      #   run: |
-      #     git config --global user.email "action@github.com"
-      #     git config --global user.name "GitHub Action"
-      #     git add -A
-      #     git commit -m "Update scraped data" -a || echo "No changes to commit"
-      #     git push
+      - name: Commit and push if there were changes
+        run: |
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Action"
+          git add -A
+          git commit -m "Update scraped data" -a || echo "No changes to commit"
+          git push
