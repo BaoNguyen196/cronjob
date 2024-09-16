@@ -50,7 +50,7 @@ const fs = require('fs').promises;
   // Save to Strapi or handle data as needed here
   await writeDataToFile({
     data: offers,
-    path: 'src/data/vi',
+    path: '/',
     fileName: 'offers',
   });
   await browser.close();
