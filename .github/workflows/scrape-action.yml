@@ -31,4 +31,4 @@ jobs:
           git config --global user.name "BaoNguyen196"
           git add offers.json
           git commit -m "Update scraped data" -a || echo "No changes to commit"
-          git push https://${{ secrets.MY_PAT }}:x-oauth-basic@github.com/BaoNguyen196/cronjob.git
+          git push https://${{ secrets.MY_PAT }}:x-oauth-basic@github.com/BaoNguyen196/cronjob.git master
