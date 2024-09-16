@@ -5,6 +5,9 @@ on:
   # schedule:
   #   - cron: "0 0 * * *" # Runs at 00:00 UTC every day
 
+permissions: # Global permissions configuration starts here
+  contents: write
+
 jobs:
   scrape-and-save:
     runs-on: ubuntu-latest
