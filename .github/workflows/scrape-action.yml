@@ -29,6 +29,6 @@ jobs:
         run: |
           git config --global user.email "action@github.com"
           git config --global user.name "GitHub Action"
-          git add -A
+          git add offer.json
           git commit -m "Update scraped data" -a || echo "No changes to commit"
-          git push
+          git push https://${{ secrets.MY_PAT }}:x-oauth-basic@github.com/BaoNguyen196/cronjob.git

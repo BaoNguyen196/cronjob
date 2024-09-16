@@ -37,14 +37,6 @@ const fs = require('fs').promises;
     return scrapedData;
   });
 
-  // fs.writeFile('src/data/vi/html-raw.txt', offers, (err) => {
-  //   if (err) {
-  //     console.error(err);
-  //   } else {
-  //     // file written successfully
-  //   }
-  // });
-
   console.log('offers: ', offers);
 
   // Save to Strapi or handle data as needed here
