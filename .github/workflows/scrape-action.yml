@@ -1,0 +1,34 @@
+name: Run Puppeteer Script
+
+on:
+  workflow_dispatch: # Allows manual trigger
+  schedule:
+    - cron: "0 0 * * *" # Runs at 00:00 UTC every day
+
+jobs:
+  scrape-and-save:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "14" # Specify the Node.js version you are using
+
+      - name: Install dependencies
+        run: |
+          npm install puppeteer
+          npm install fs-extra # If you use fs-extra for file operations
+
+      - name: Run the script
+        run: node scrape.js
+
+      - name: Commit and push if there were changes
+        run: |
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Action"
+          git add -A
+          git commit -m "Update scraped data" -a || echo "No changes to commit"
+          git push
