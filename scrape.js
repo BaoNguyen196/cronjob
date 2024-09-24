@@ -1,8 +1,23 @@
 const puppeteer = require("puppeteer");
 const fs = require("fs").promises;
+const path = require("path");
+const {
+  getOffers: getDummyOffers,
+  getDetail: getDummyDetail,
+} = require("./utils");
 
-(async () => {
-  // Launch a new browser session
+const acceptCookies = async (page) => {
+  const cookieSelector =
+    "#CookieReportsBanner .wscrBannerContentInner a:first-child";
+  await page
+    .waitForSelector(cookieSelector, { timeout: 5000 })
+    .catch((e) => console.log("Cookie banner not found."));
+  await page
+    .click(cookieSelector)
+    .catch((e) => console.log("Failed to click cookie accept button."));
+};
+
+const getOffers = async () => {
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
   await page.setViewport({ width: 1280, height: 800 });
@@ -14,11 +29,7 @@ const fs = require("fs").promises;
       waitUntil: "networkidle0",
     }
   );
-
-  await page.waitForSelector('[data-area="offer_list_container"]');
-  await page
-    .locator("#CookieReportsBanner .wscrBannerContentInner a:first-child")
-    .click();
+  acceptCookies(page);
 
   const offers = await page.evaluate(async () => {
     const scrapedData = [];
@@ -56,26 +67,25 @@ const fs = require("fs").promises;
     }
 
     offersEle.forEach((item) => {
-      const imgSrc = item.querySelector("img").src;
-      const title = item.querySelector("h2").innerText;
-      const description = item.querySelector("a>p.vs-description").innerText;
-      const link = item.querySelector("a").href;
-      scrapedData.push({ title, description, imgSrc, link });
+      const data = {
+        title: item.querySelector("h2").innerText.trim(),
+        description: item.querySelector("a>p.vs-description").innerText,
+        imgSrc: item.querySelector("img").src,
+        detailUrl: item.querySelector("a").href,
+        id: item
+          .querySelector("h2")
+          .innerText.toLocaleLowerCase()
+          .trim()
+          .replace(/ /g, "-"),
+      };
+      scrapedData.push(data);
     });
     return scrapedData;
   });
-
-  console.log("offers: ", offers);
-  console.log("offers.length: ", offers.length);
-
-  // Save to Strapi or handle data as needed here
-  await writeDataToFile({
-    data: offers,
-    path: "src/data/vi",
-    fileName: "offers",
-  });
   await browser.close();
-})();
+
+  return offers;
+};
 
 async function writeDataToFile({ data, fileName, path }) {
   try {
@@ -89,3 +99,81 @@ async function writeDataToFile({ data, fileName, path }) {
     console.error("Failed to write data to file:", error);
   }
 }
+
+const getDetailOffer = async (offer) => {
+  const page = await global.browser.newPage();
+  try {
+    await page.goto(offer.detailUrl, { waitUntil: "networkidle2" });
+    acceptCookies(page);
+    await page.waitForSelector("h2.vs-h3");
+    const validityContent = await page.evaluate(() => {
+      const perkElement = document.querySelector("vs-perk-validity");
+      return perkElement ? perkElement.textContent : null;
+    });
+
+    const detailContent = await page.evaluate(() => {
+      const element = document.querySelector("vs-perk-details");
+      const computedStyle = window.getComputedStyle(element);
+      let styles = {};
+      // Iterate over all the properties in the computed style
+      for (let i = 0; i < computedStyle.length; i++) {
+        const prop = computedStyle[i];
+        styles[prop] = computedStyle.getPropertyValue(prop);
+      }
+      const styleContent = JSON.stringify(styles);
+      if (element && styles) {
+        return { html: element.outerHTML, styles: styleContent };
+      }
+      return null;
+    });
+    return {
+      [offer.id]: {
+        detail: detailContent,
+        validity: validityContent,
+        id: offer.id,
+      },
+    };
+  } catch (error) {
+    console.error(`Failed to get detail for ${url}:`, error);
+  } finally {
+    await page.close();
+  }
+};
+
+const getFullData = async () => {
+  global.browser = await puppeteer.launch();
+  try {
+    const offers = await getOffers();
+    const detailPromises = offers.map((offer) => getDetailOffer(offer));
+    const results = await Promise.all(detailPromises);
+    await writeDataToFile({
+      data: results.reduce((acc, item) => ({ ...acc, ...item }), {}),
+      fileName: "detail",
+      path: path.join(__dirname, "src", "data"),
+    });
+  } catch (error) {
+    console.error("Failed to fetch:", error);
+  } finally {
+    await global.browser.close();
+  }
+};
+
+getFullData();
+
+const displayData = async () => {
+  const browser = await puppeteer.launch({ headless: false });
+  const page = await browser.newPage();
+  await page.goto(
+    "https://developer.mozilla.org/en-US/docs/Web/Performance/Critical_rendering_path",
+    { waitUntil: "networkidle2" }
+  );
+
+  await page.waitForSelector("#content");
+  await page.evaluate(() => {
+    const data = getDummyDetail();
+    const content = document.querySelector("#content");
+    const contentElement = document.createElement("div");
+    contentElement.innerHTML = data.content;
+    content.appendChild(contentElement);
+  });
+};
